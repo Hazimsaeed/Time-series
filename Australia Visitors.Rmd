@@ -1,0 +1,111 @@
+---
+title: "TS"
+author: "Hazim Saeed"
+date: "July 10, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+library('expsmooth')
+library('fpp2')
+head( visitors )
+autoplot(visitors) +
+  ggtitle("Total international visitors to Australia ") +
+  xlab("Year") +
+  ylab("Millions of Visitors")
+```
+
+### I Load the visitors.rda dataset, make a time plot of the data and describe the main features of the series:
+
+```{r message=FALSE, warning=FALSE}
+DY <- diff(visitors)
+autoplot(DY) +
+  ggtitle("Total international visitors to Australia ") +
+  xlab("Year") +
+  ylab("Millions of Visitors")
+ggseasonplot(DY)+
+  ggtitle("Total international visitors to Australia ") +
+  xlab("Year") +
+  ylab("Millions of Visitors")
+```
+
+`Features:`
+
+  `- Trend as there is increase`
+  
+  `- A seasonal pattern occurs.`
+
+  `- Multiplicative because magnitude of the seasonal fluctuations increases with level.`
+  
+
+### I Forecast the next 15 months using Holt-Winters' methods.
+
+. Linear trend with additive seasonality
+
+. Linear trend with multiplicative seasonality
+```{r}
+fit1 <- hw(visitors,seasonal="additive")
+fit2 <- hw(visitors,seasonal="multiplicative")
+autoplot(visitors) +
+  autolayer(fit1, series="HW additive forecasts", PI=FALSE) +
+  autolayer(fit2, series="HW multiplicative forecasts", PI=FALSE) +
+  xlab("Year") +
+  ylab("Visitor nights (millions)") +
+  ggtitle("International visitors nights in Australia") +
+  guides(colour=guide_legend(title="Forecast"))
+```
+
+. Linear trend with additive seasonality and damping
+
+. Linear trend with multiplicative seasonality and damping
+```{r}
+fc1 <- hw(visitors, damped=TRUE, seasonal="additive")
+fc2 <- hw(visitors, damped=TRUE, seasonal="multiplicative")
+autoplot(visitors) +
+  autolayer(fc1, series="HW addit damped forecasts", PI=FALSE) +
+  autolayer(fc2, series="HW multi damped forecasts", PI=FALSE) +
+  xlab("Year") +
+  ylab("Visitor nights (millions)") +
+  ggtitle("International visitors nights in Australia") +
+  guides(colour=guide_legend(title="Forecast"))
+```
+ 
+### I Use the accuracy() function to compare the Root-Mean-Square-Error (RMSE) values of the forecasts from the various methods.
+ 
+```{r} 
+accuracy(fit1)
+accuracy(fit2)
+accuracy(fc1)
+accuracy(fc2)
+```
+
+`It is clear from the RMSE that Linear trend with multiplicative seasonality and damping is the best for this data as it has more reduction in error among all the other methods`
+
+### I Use the checkresiduals() function to check that the residuals from the best model look like white noise and provide a summary of the model's smoothing parameters using the summary() function.
+
+```{r} 
+fit <- ets(visitors)
+summary(fit)
+checkresiduals(fit)
+autoplot(fit)
+cbind('Residuals' = residuals(fit),
+      'Forecast errors' = residuals(fit,type='response')) %>%
+  autoplot(facet=TRUE) + xlab("Year") + ylab("")
+checkresiduals(fc2)
+```
+`The residuals look like white noise ` 
+```{r} 
+summary(fit1)
+summary(fit2)
+summary(fc1)
+summary(fc2)
+```
+`The small values for alpha, beta and gamma show that the trend and seasonality do not change much over time. we can see they all close to zero except alpha. alpha = 0.6668, beta  = 0.0043 and gamma = 1e-04.`
+`Lower AIC indicate a more parsimonious model, when compare AIC of each modle we can see that the second model has lower AIC but higher RMSE compared to the last model`
