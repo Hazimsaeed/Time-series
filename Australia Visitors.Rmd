@@ -84,6 +84,7 @@ accuracy(fit1)
 accuracy(fit2)
 accuracy(fc1)
 accuracy(fc2)
+
 ```
 
 `It is clear from the RMSE that Linear trend with multiplicative seasonality and damping is the best for this data as it has more reduction in error among all the other methods`
