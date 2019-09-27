@@ -1,0 +1,196 @@
+---
+title: ""
+author: ""
+date: "July 16, 2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+library('expsmooth')
+library('fpp2')
+library('fitdistrplus')
+library('logspline')
+library('xts')
+library('forecast');
+library('fma')
+library('lmtest')
+library('tseries')
+library('Quandl')
+library('fpp');
+library('urca')
+library('TSA')
+
+```
+
+### I Loaded the usgdp.rda dataset and split it into a training dataset (1947Q1 - 2005Q1) and a test dataset (2005Q2 - 2006Q1):
+
+```{r message=FALSE, warning=FALSE}
+
+myts.train <- window(usgdp, end=c(2005,1))
+myts.test  <- window(usgdp, start=c(2005,2))
+head(myts.train)
+tail(myts.train)
+head(myts.test)
+x <- ts(myts.train, frequency=365/90)
+fit <- tbats(x)
+seasonal <- !is.null(fit$seasonal)
+print(paste('Seasonality = ',seasonal))
+
+```
+```{r message=FALSE, warning=FALSE}
+ggseasonplot(myts.train)+
+  ggtitle("US GDP") +
+  xlab("Year") +
+  ylab("GDP")
+```
+
+`Features:`
+
+  `- Trend as there is increase`
+  
+  `- No seasonal pattern occurs.I used the tbats model.` 
+  `   It will handle quarter seasonality and will automatically determine if a seasonal pattern is present, `
+  `   I aslo used ggseasonplot and it show no Seasonality`
+  
+### I Plotted the training dataset and test if Box-Cox transformation necessary for this data?
+```{r message=FALSE, warning=FALSE}
+autoplot(myts.train) +
+  ggtitle("US GDP") +
+  xlab("Year") +
+  ylab("GDP")
+
+```
+`I don't belive Box-Cox transformation is nessesry for this data because data show `
+`no variation that increases with the level of the series`
+
+
+### I Plotted the 1st and 2nd order difference of the data. I Applied KPSS Test for Stationarity to determine which difference order results in a stationary dataset.
+
+
+```{r message=FALSE, warning=FALSE}
+ndiffs(myts.train)
+DY <- diff(myts.train)
+ndiffs(DY)
+DY2 <- diff(DY)
+ndiffs(DY2)
+cbind("No Diff" = myts.train,
+      "Log data" = log(myts.train),
+      "First Diff" = DY,
+      "Second Diff" = DY2) %>%
+autoplot(facets=TRUE) +
+  ggtitle("US GDP") +
+  xlab("Year") +
+  ylab("GDP")
+
+
+```
+```{r message=FALSE, warning=FALSE}
+par(mfrow=c(2,1))
+Acf(myts.train)
+Pacf(myts.train)
+```
+`As seen from the ACF graph, there are significant lags. PACF tells a slight different story.`
+```{r message=FALSE, warning=FALSE}
+(LB_test <- Box.test(myts.train,lag=20, type='Ljung-Box'))
+(adf_test <- adf.test(myts.train,alternative = 'stationary')) # p-value < 0.05 indicates the TS is stationary
+(kpss.test(myts.train))#low p-value indicate not trend stationary (non-stationary)
+```
+`While using Ljung-Box testing stationarity, it shows a very small p-value which `
+`indicates that the time series is stationary. let's do same steps for dataset after applying 2nd Diff`
+```{r message=FALSE, warning=FALSE}
+par(mfrow=c(2,1))
+Acf(DY2)
+Pacf(DY2)
+
+```
+```{r message=FALSE, warning=FALSE}
+(LB_test <- Box.test(DY2,lag=20, type='Ljung-Box'))# small p-value indicates is stationary
+(adf_test <- adf.test(DY2,alternative = 'stationary'))# p-value < 0.05 indicates the TS is stationary
+(kpss.test(DY2))#low p-value indicate not trend stationary (non-stationary)
+
+```
+`Now Ljung-Box indicates is stationary (small p-value), adf.test  indicates `
+`is stationary (p-value < 0.05) and kpss.test indicate trend stationary `
+
+```{r message=FALSE, warning=FALSE}
+ndiffs(myts.train)
+myts.train %>% ur.kpss() %>% summary()
+myts.train %>% diff() %>% ur.kpss() %>% summary()
+myts.train %>% diff() %>% diff() %>% ur.kpss() %>% summary()
+
+```
+
+`As we saw from the KPSS tests above, two difference is required to make myts.train data stationary.`
+
+### I Fitted a suitable ARIMA model to the training dataset using the auto.arima() function.
+
+```{r}
+par(mfrow=c(2,1))
+plot(myts.train)
+plot(DY2)
+
+```
+
+```{r}
+(fit.arima <- auto.arima(myts.train))
+```
+
+`p=2, d=0, q=2 Coefficients -0.1138,  0.3059,  -0.5829,  -0.3710,`
+
+
+### I Computed the sample Extended ACF (EACF) and use the Arima() function to try some other plausible models by experimenting with the orders chosen. I used the model summary() function to compare the Corrected Akaike information criterion (i.e., AICc) values.
+
+```{r}
+
+ESACF <- eacf(myts.train)
+ESACF$eacf
+(EACF1 <- Arima(myts.train, order=c(0,2,1)))
+(EACF2 <- Arima(myts.train, order=c(0,2,2)))
+(EACF3 <- Arima(myts.train, order=c(1,2,1)))
+(EACF4 <- Arima(myts.train, order=c(1,2,2)))
+(EACF5 <- Arima(myts.train, order=c(2,2,1)))
+(EACF6 <- Arima(myts.train, order=c(2,2,2)))
+```
+`Order=c(2,2,1) provide slightly better model than auto.arima which (2,2,2)`
+ 
+
+### I used the best model to forecast and plot the GDP forecasts with 80 and 95 % confidence levels for 2005Q2 - 2006Q1 (Test Period).
+ 
+```{r} 
+
+autoplot(forecast(fit.arima,h=length(myts.test)),include=6)+ autolayer(myts.test)
+
+```
+```{r} 
+
+autoplot(forecast(EACF5,h=length(myts.test)),include=6)+ autolayer(myts.test)
+
+```
+`I exclude some early data and include last 6Q to increase the size of the polt so prediction become clear`
+
+### I compared my forecasts with the actual values using error = actual - estimate and plot the errors.
+
+```{r} 
+fit.arima.forecast <- forecast(fit.arima,h=length(myts.test))
+myts.test-fit.arima.forecast$mean
+EACF5.forecast <- forecast(EACF5,h=length(myts.test))
+myts.test-EACF5.forecast$mean
+
+```
+`Order=c(2,2,1) provide less error than auto.arima which (2,2,2)`
+
+### I calculated the sum of squared error.
+
+```{r} 
+accuracy(fit.arima.forecast,myts.test)
+accuracy(EACF5.forecast,myts.test)
+```
+`It is clear that the model with (2,2,1) is better`
