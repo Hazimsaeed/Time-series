@@ -20,6 +20,7 @@ autoplot(visitors) +
   ggtitle("Total international visitors to Australia ") +
   xlab("Year") +
   ylab("Millions of Visitors")
+  
 ```
 
 ### I Load the visitors.rda dataset, make a time plot of the data and describe the main features of the series:
