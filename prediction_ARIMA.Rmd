@@ -1,0 +1,165 @@
+---
+title: ""
+author: ""
+date: "July 16, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+```{r message=FALSE, warning=FALSE}
+list.of.packages <- c("expsmooth", "fpp2","fitdistrplus", "logspline","readxl", "xts","forecast", "fma","lmtest", "tseries","Quandl", "fpp","urca", "TSA","tidyverse","gdata","XLConnect")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages,dependencies=TRUE)
+
+library('expsmooth')
+library('fpp2')
+library('fitdistrplus')
+library('logspline')
+library('xts')
+library('forecast');
+library('fma')
+library('lmtest')
+library('tseries')
+library('Quandl')
+library('fpp');
+library('urca')
+library('TSA')
+library('readxl')
+library('tidyverse')
+library('gdata')
+#library('XLConnect')
+#library('gdata')
+#library('gdata')
+```
+
+### Combine the data from the 16 files into a single dataset and plot it:
+
+```{r message=FALSE, warning=FALSE}
+dataPath<-"~/Downloads/Time_Seriese/week4"
+setwd(dataPath)
+getwd()
+
+file.list <- list.files(path = dataPath,pattern='*.xls')
+df.list <- lapply(file.list, read_xls,sheet = 1, col_names = TRUE,skip = 1, range = cell_cols(c("C", "E")))
+
+for (i in 1:length(df.list)){df.list[[i]]<-
+cbind(df.list[[i]],datetime=as.Date(gsub("I-57-", "",gsub(".xls", "", file.list[i])),format="%Y-%B-%d"))
+df.list[[i]] <- subset(df.list[[i]], select = -c(SI80) )
+df.list[[i]] <- df.list[[i]][-c(1, 2, 27,28), ]
+df.list[[i]]$datetime <- as.POSIXct(paste(df.list[[i]]$datetime,df.list[[i]]$Time),format="%Y-%m-%d %H:%M")
+}
+dataset<-do.call("rbind", df.list)
+dataset<-dataset[, c("datetime", "I80E")]
+dataset<-dataset[order(dataset$datetime),]
+ts.dataset<-ts(dataset$I80E, frequency = 1)
+
+autoplot(ts.dataset)
+
+
+```
+### Split the dataset into a training dataset which includes 6/16/2013 -6/30/2013 samplesand a test dataset which includes 7/1/2013samples.Plot the ACF and PACF,and apply the Augmented Dickey-Fuller Test to check if the training dataset is stationary.
+```{r message=FALSE, warning=FALSE}
+
+myts.train.ds <- dataset[dataset$datetime<as.Date('2013-07-01'),2]
+myts.train.ds<-as.numeric(myts.train.ds)
+myts.test.ds  <- dataset[dataset$datetime>as.POSIXct('2013-06-30 23:00:00'),2]
+myts.test.ds<-as.numeric(myts.test.ds)
+# head(myts.train)
+# tail(myts.train)
+# head(myts.test)
+myts.train<-ts(myts.train.ds, frequency = 24)
+myts.test<-ts(myts.test.ds,start = c(7,1), frequency = 1)
+fit <- tbats(myts.train)
+seasonal <- !is.null(fit$seasonal)
+print(paste('Seasonality = ',seasonal))
+ggseasonplot(myts.train)
+
+ggtsdisplay(myts.train)
+adf.test(myts.train)
+
+
+```
+
+`Features:`
+
+  `- seasonal pattern occurs.I used the tbats model.` 
+  `   It will handle quarter seasonality and will automatically determine if a seasonal pattern is present, `
+  `   I aslo used ggseasonplot and it show no Seasonality`
+  
+  `- series is stationary p value in the ADF test is 0.01`
+  
+  
+### Build an Arima(p,d,q)model usingthe training dataset and R auto.arima()function.Change the values of p and q and determine the best model using AICc and BICvalues. AICc and BIC select the same model as the best model For each derived model
+```{r message=FALSE, warning=FALSE}
+(fit.arima <- auto.arima(myts.train, seasonal = FALSE))
+(ESACF <- eacf(myts.train))
+(EACF1 <- Arima(myts.train, order=c(2,0,1)))
+(EACF2 <- Arima(myts.train, order=c(3,0,1)))
+(EACF3 <- Arima(myts.train, order=c(7,0,1)))
+(EACF4 <- Arima(myts.train, order=c(3,0,2)))
+(EACF5 <- Arima(myts.train, order=c(2,0,3)))
+(EACF6 <- Arima(myts.train, order=c(2,0,2)))
+(Arima.AICs <- c(fit.arima=fit.arima$aic,EACF1=EACF1$aic,EACF2=EACF2$aic,EACF3=EACF3$aic,EACF4=EACF4$aic,EACF5=EACF5$aic,EACF6=EACF6$aic))
+checkresiduals(EACF3)
+```
+`IEACF3 give better model than auto.arima`
+
+
+
+### Build a day of the week seasonal Arima(p,d,q)(P,Q,D)s model using the training dataset and R auto.arima() function.
+
+
+```{r message=FALSE, warning=FALSE}
+myts.train.day <- ts(data = myts.train.ds,start = c(6,16), frequency = 168)
+(fit.arima.day <- auto.arima(myts.train.day, seasonal = TRUE))
+```
+
+
+### Use the Arima(p,d,q)(P,Q,D)s model to forecast for July 1st(which is a Monday). Plot your result.
+```{r message=FALSE, warning=FALSE}
+forecast.day<-forecast(fit.arima.day, h= 24)
+autoplot(forecast.day)
+
+```
+
+### Build a hour of the day seasonal Arima(p,d,q)(P,Q,D)s model using the training dataset and R auto.arima() function.
+
+```{r message=FALSE, warning=FALSE}
+myts.train.hour <- ts(data = myts.train.ds, frequency = 24)
+(fit.arima.hour <- auto.arima(myts.train.hour, seasonal = TRUE))
+
+```
+
+### Use the Arima(p,d,q)(P,Q,D)s model to forecastfor July 1st (which is a Monday). Plot your result.
+
+```{r message=FALSE, warning=FALSE}
+forecast.hour<-forecast(fit.arima.hour, h= 24)
+autoplot(forecast.hour)
+
+```
+
+### Compare the forecast of the models for July 1 8:00, 9:00, 17:00 and 18:00
+
+
+```{r message=FALSE, warning=FALSE}
+
+accuracy(forecast.day$mean[c(8,9,17,18)], myts.test[c(8,9,17,18)])
+accuracy(forecast.hour$mean[c(8,9,17,18)], myts.test[c(8,9,17,18)])
+
+autoplot(ts(myts.test[c(8,9,17,18)]))+ autolayer(ts(forecast.day$mean[c(8,9,17,18)]))+ggtitle("8,9,17,18 by day") 
+autoplot(ts(myts.test[c(8,9,17,18)]))+ autolayer(ts(forecast.hour$mean[c(8,9,17,18)]))+ggtitle("8,9,17,18 by hour") 
+
+autoplot(ts(myts.test))+ autolayer(ts(forecast.day$mean))+ggtitle("8,9,17,18 by day") 
+autoplot(ts(myts.test))+ autolayer(ts(forecast.hour$mean))+ggtitle("8,9,17,18 by hour") 
+
+
+```
+`day of the week seasonal Arima is better than hour of the day seasonal Arima`
