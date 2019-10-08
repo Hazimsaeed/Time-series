@@ -63,9 +63,9 @@ ts.dataset<-ts(dataset$I80E, frequency = 1)
 
 autoplot(ts.dataset)
 
-
+ 
 ```
-### Split the dataset into a training dataset which includes 6/16/2013 -6/30/2013 samplesand a test dataset which includes 7/1/2013samples.Plot the ACF and PACF,and apply the Augmented Dickey-Fuller Test to check if the training dataset is stationary.
+### Split the dataset into a  training dataset which includes 6/16/2013 -6/30/2013 samplesand a test dataset which includes 7/1/2013samples.Plot the ACF and PACF,and apply the Augmented Dickey-Fuller Test to check if the training dataset is stationary.
 ```{r message=FALSE, warning=FALSE}
 
 myts.train.ds <- dataset[dataset$datetime<as.Date('2013-07-01'),2]
