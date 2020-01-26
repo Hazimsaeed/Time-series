@@ -28,7 +28,7 @@ library('fpp');
 library('urca')
 library('TSA')
 
-```
+``` 
 
 ### I Loaded the usgdp.rda dataset and split it into a training dataset (1947Q1 - 2005Q1) and a test dataset (2005Q2 - 2006Q1):
 
