@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 list.of.packages <- c("expsmooth", "fpp2","fitdistrplus", "logspline","readxl", "xts","forecast", "fma","lmtest", "tseries","Quandl", "fpp","urca", "TSA","tidyverse","gdata","XLConnect")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages,dependencies=TRUE)
-
+ 
 library('expsmooth')
 library('fpp2')
 library('fitdistrplus')
