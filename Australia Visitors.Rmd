@@ -36,7 +36,7 @@ ggseasonplot(DY)+
   xlab("Year") +
   ylab("Millions of Visitors")
 ```
-
+ 
 `Features:`
 
   `- Trend as there is increase`
