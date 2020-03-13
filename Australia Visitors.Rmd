@@ -22,7 +22,7 @@ autoplot(visitors) +
   ylab("Millions of Visitors")
   
 ```
- 
+  
 ### I Load the visitors.rda dataset, make a time plot of the data and describe the main features of the series:
 
 ```{r message=FALSE, warning=FALSE}
