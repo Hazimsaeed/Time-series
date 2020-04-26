@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
    
    
-
+ 
 
 ```{r message=FALSE, warning=FALSE}
 list.of.packages <- c("expsmooth", "fpp2","fitdistrplus", "logspline","readxl", "xts","forecast", "fma","lmtest", "tseries","Quandl", "fpp","urca", "TSA","tidyverse","gdata","XLConnect")
