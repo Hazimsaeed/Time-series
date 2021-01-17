@@ -47,7 +47,7 @@ ggseasonplot(DY)+
   
 
 ### I Forecast the next 15 months using Holt-Winters' methods.
-
+ 
 . Linear trend with additive seasonality
 
 . Linear trend with multiplicative seasonality
