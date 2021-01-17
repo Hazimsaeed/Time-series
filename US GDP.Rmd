@@ -43,7 +43,7 @@ x <- ts(myts.train, frequency=365/90)
 fit <- tbats(x)
 seasonal <- !is.null(fit$seasonal)
 print(paste('Seasonality = ',seasonal))
-
+ 
 ```
 ```{r message=FALSE, warning=FALSE}
 ggseasonplot(myts.train)+
